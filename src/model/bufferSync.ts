@@ -3,7 +3,6 @@ import type Documents from '../core/documents'
 import events from '../events'
 import { DidChangeTextDocumentParams } from '../types'
 import { disposeAll } from '../util'
-import { isVim } from '../util/constants'
 import { Disposable } from '../util/protocol'
 import type Document from './document'
 

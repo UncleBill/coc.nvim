@@ -17,10 +17,9 @@ export function resolveLogFilepath(): string {
       // noop
     }
   }
-  let tmpdir = os.tmpdir()
-  dir = path.join(tmpdir, `coc.nvim-${process.pid}`)
+  dir = path.resolve(os.homedir(), '.config/coc/.logs')
   fs.mkdirSync(dir, { recursive: true })
-  return path.join(dir, `coc-nvim.log`)
+  return path.join(dir, `coc-nvim-${process.pid}.log`)
 }
 
 export function emptyFile(filepath: string): void {

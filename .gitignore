@@ -13,3 +13,4 @@ publish.sh
 release.sh
 !src/__tests__/tags
 src/__tests__/extensions/db.json
+.DS_Store
