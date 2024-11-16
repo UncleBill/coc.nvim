@@ -2,6 +2,8 @@
  * Used for prompt popup on vim
  */
 const readline = require("readline")
+const path = require("path")
+const fs = require("fs")
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -10,6 +12,21 @@ const rl = readline.createInterface({
   prompt: ''
 })
 
+var history = []
+const history_file = path.resolve(__dirname, 'coc-prompt-history.json')
+try {
+  history = fs.existsSync(history_file) ? JSON.parse(fs.readFileSync(history_file, 'utf8')).filter(Boolean) : []
+} catch {}
+
+function writeHistory() {
+  const newHistory = Array.from(new Set(history.slice(-100).reverse()))
+    .reverse()
+    .filter((x) => x.trim().length > 2)
+  fs.writeFileSync(history_file, JSON.stringify(newHistory, null, 2))
+}
+
+history.push(process.argv[2] || '')
+let history_cursor = history.length - 1
 let value = process.argv[2]
 let placeholder = process.argv[3]
 let clear = false
@@ -20,10 +37,17 @@ if (value) {
   rl.write('\x1B[90m' + placeholder + '\x1B[39m')
   rl.write('', {ctrl: true, name: 'a'})
 }
-rl.on('line', input => {
+rl.on('line', (input) => {
+  history.push(input)
+  writeHistory()
   send(['confirm', clear ? '' : input])
   process.exit()
 })
+
+function clearLine() {
+  rl.write('', { ctrl: true, name: 'a' })
+  rl.write('', { ctrl: true, name: 'k' })
+}
 
 let original_ttyWrite = rl._ttyWrite
 rl._ttyWrite = function (code, key) {
@@ -31,10 +55,27 @@ rl._ttyWrite = function (code, key) {
     send(['send', '<C-j>'])
     return ''
   }
+  if (key.name === 'up') {
+    if (history_cursor > 0) {
+      const prev = history[--history_cursor]
+      if (prev) {
+        clearLine()
+        rl.write(prev, {})
+      }
+      return
+    }
+  } else if (key.name === 'down') {
+    if (history.length - history_cursor > 1) {
+      const next = history[++history_cursor]
+      clearLine()
+      rl.write(next, {})
+      return
+    }
+  }
   original_ttyWrite.apply(rl, arguments)
   if (clear && rl.line.includes('\x1B')) {
     clear = false
-    rl.write('', {ctrl: true, name: 'k'})
+    rl.write('', { ctrl: true, name: 'k' })
     return
   }
   send(['change', rl.line])
@@ -56,6 +97,8 @@ process.stdin.on('keypress', (e, key) => {
     }
     if (k == '<esc>') {
       send(['exit', ''])
+      history.push(rl.line)
+      writeHistory()
       process.exit()
     }
     if (k) {
